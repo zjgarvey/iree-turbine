@@ -27,10 +27,11 @@ def get_launchable(
     func_name = signature.func_name
     module_factory = lambda: signature.get_nn_module(use_custom=use_custom)
     arg_factory = lambda: signature.get_sample_args(splat_value=0)
+    make_single_dispatch: bool = getattr(signature, "single_dispatch", True)
     return generic_get_launchable(
         module_factory=module_factory,
         arg_factory=arg_factory,
         func_name=func_name,
         cache_only=cache_only,
-        force_single_dispatch=True,
+        force_single_dispatch=make_single_dispatch,
     )

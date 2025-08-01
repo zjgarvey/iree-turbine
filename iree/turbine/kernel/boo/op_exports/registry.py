@@ -11,6 +11,7 @@ from ..exports.parser import OpCLIParser
 from .conv import ConvParser, ConvSignature
 from .gemm import GEMMParser, GEMMSignature
 from .layer_norm import LayerNormParser, LayerNormSignature
+from .batch_norm import BatchNormParser, BatchNormSignature
 
 
 @dataclass
@@ -89,3 +90,4 @@ class BooOpRegistry:
 BooOpRegistry._register("conv", ConvSignature, ConvParser)
 BooOpRegistry._register("gemm", GEMMSignature, GEMMParser)
 BooOpRegistry._register("layernorm", LayerNormSignature, LayerNormParser)
+BooOpRegistry._register("bnorm", BatchNormSignature, BatchNormParser)

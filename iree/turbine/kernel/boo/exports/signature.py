@@ -6,6 +6,7 @@
 
 from abc import ABC, abstractmethod
 from typing import Any, Optional, TypeVar, Union
+from functools import cached_property
 
 import torch
 
@@ -42,7 +43,7 @@ class OpSignature(ABC):
         """Generates sample arguments as PyTorch tensors for the operation."""
         ...
 
-    @property
+    @cached_property
     @abstractmethod
     def func_name(self) -> str:
         """MLIR function name to use for the operation, unique across operations."""
@@ -77,7 +78,7 @@ class OpSignature(ABC):
         ...
 
     @abstractmethod
-    def get_arg_index_for_backward(self) -> int | None:
+    def get_arg_index_for_backward(self) -> tuple[int, ...] | int | None:
         """For a backward mode, returns the index of the argument whose
         back-propagated gradient is computed by the kernel with this
         signature.
@@ -92,7 +93,7 @@ class OpSignature(ABC):
         self,
         forward_args: tuple[torch.Tensor, ...],
         forward_results: tuple[torch.Tensor, ...],
-    ) -> tuple[torch.Tensor]:
+    ) -> tuple[torch.Tensor, ...]:
         """Arranges arguments and results of the forward pass in a way that they
         can be passed as trailing arguments to the backward pass.
 

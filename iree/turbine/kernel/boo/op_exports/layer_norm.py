@@ -418,7 +418,7 @@ class LayerNormParser(OpCLIParser):
     def get_miopen_parser() -> argparse.ArgumentParser:
         parser = argparse.ArgumentParser()
         parser.add_argument(
-            "command", default="layernorm", choices=_DTypeCommandDispatcher.choices()
+            "command", default="bnorm", choices=_DTypeCommandDispatcher.choices()
         )
         parser.add_argument(
             "--forw", "-F", type=int, default=1, help="Run only forward LayerNorm"
@@ -429,6 +429,9 @@ class LayerNormParser(OpCLIParser):
             type=str,
             help="Input Tensor descriptor.\nFormat: NxC[xD]xHxW",
         )
+        parser.add_argument(
+            "--save-mean-var", "-s", type=float, default=1e-5, help="Alpha"
+        )
         parser.add_argument("--eps", "-e", type=float, default=1e-5, help="Alpha")
         parser.add_argument(
             "--mode",
@@ -437,9 +440,6 @@ class LayerNormParser(OpCLIParser):
             default=0,
             choices=[0, 1],
             help="elemwise affine mode (0), weight and bias mode (1)",
-        )
-        parser.add_argument(
-            "--normalized_dim", "-o", type=int, default=3, help="Normalized dim"
         )
         return parser
 
