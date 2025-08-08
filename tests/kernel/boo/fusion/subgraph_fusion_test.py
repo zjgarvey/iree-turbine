@@ -99,7 +99,7 @@ class SampleModule3(torch.nn.Module):
 
 class TestSubgraphReplacement:
     def testLinearLayoutHandling(self, boo_cache_dir: Path):
-        schema: FusionSchema = {torch.ops.aten.addmm.default: OpFusionSpec()}
+        schema: FusionSchema = {"aten.addmm.default": OpFusionSpec()}
         recorder = EagerAndRecordGraphs()
         m = torch.compile(
             torch.nn.Linear(in_features=64, out_features=16),
@@ -120,11 +120,11 @@ class TestSubgraphReplacement:
         x = torch.ones([3, 4, 16, 16])
 
         fusion_schema: FusionSchema = {
-            torch.ops.aten.addmm.default: OpFusionSpec(
+            "aten.addmm.default": OpFusionSpec(
                 recursive=True,
                 consumers=(
-                    torch.ops.aten.relu.default,
-                    torch.ops.aten.view.default,
+                    "aten.relu.default",
+                    "aten.view.default",
                 ),
             ),
         }
@@ -160,11 +160,11 @@ class TestSubgraphReplacement:
         x2 = torch.ones([3, 4, 32, 16])
 
         fusion_schema: FusionSchema = {
-            torch.ops.aten.addmm.default: OpFusionSpec(
+            "aten.addmm.default": OpFusionSpec(
                 recursive=True,
                 consumers=(
-                    torch.ops.aten.relu.default,
-                    torch.ops.aten.view.default,
+                    "aten.relu.default",
+                    "aten.view.default",
                 ),
             ),
         }
@@ -202,9 +202,9 @@ class TestSubgraphReplacement:
         x0 = torch.randn([16, 16])
         x1 = torch.randn([16, 16])
         schema: FusionSchema = {
-            torch.ops.aten.addmm.default: OpFusionSpec(
+            "aten.addmm.default": OpFusionSpec(
                 recursive=True,
-                producers=(torch.ops.aten.relu.default, torch.ops.aten.add.Tensor),
+                producers=("aten.relu.default", "aten.add.Tensor"),
             )
         }
         recorder = EagerAndRecordGraphs()
@@ -226,9 +226,9 @@ class TestSubgraphReplacement:
         m = SampleModule3().to(memory_format=torch.channels_last)
         x = torch.ones([2, 3, 16, 16], requires_grad=False)
         schema: FusionSchema = {
-            torch.ops.aten.convolution.default: OpFusionSpec(
+            "aten.convolution.default": OpFusionSpec(
                 recursive=True,
-                consumers=(torch.ops.aten.sigmoid.default,),
+                consumers=("aten.sigmoid.default",),
             )
         }
         expected_y = m(x)
@@ -244,7 +244,7 @@ class TestSubgraphReplacement:
 
     def testReplacementMultiOutputNode(self):
         schema: FusionSchema = {
-            torch.ops.aten._native_batch_norm_legit_functional.default: OpFusionSpec(),
+            "aten._native_batch_norm_legit_functional.default": OpFusionSpec(),
         }
         recorder = EagerAndRecordGraphs()
         backend = boo.backend(nested_backend=recorder, fusion_schema=schema)
@@ -279,10 +279,10 @@ class TestSubgraphReplacement:
         x = torch.ones([2, 3, 16, 16], requires_grad=False)
         w = torch.ones([4, 3, 1, 1], requires_grad=False)
         schema: FusionSchema = {
-            torch.ops.aten.convolution.default: OpFusionSpec(
+            "aten.convolution.default": OpFusionSpec(
                 recursive=True,
                 make_single_dispatch=True,
-                consumers=(torch.ops.aten.sigmoid.default,),
+                consumers=("aten.sigmoid.default",),
             )
         }
 
@@ -305,9 +305,9 @@ class TestSubgraphReplacement:
         x0 = torch.randn([16, 16])
         x1 = torch.randn([16, 16])
         schema: FusionSchema = {
-            torch.ops.aten.addmm.default: OpFusionSpec(
+            "aten.addmm.default": OpFusionSpec(
                 recursive=False,
-                producers=(torch.ops.aten.relu.default, torch.ops.aten.add.Tensor),
+                producers=("aten.relu.default", "aten.add.Tensor"),
             )
         }
         recorder = EagerAndRecordGraphs()
@@ -327,9 +327,9 @@ class TestSubgraphReplacement:
         m = SampleModule2()
         x = torch.ones([2, 3, 16, 16], requires_grad=False)
         schema: FusionSchema = {
-            torch.ops.aten.convolution.default: OpFusionSpec(
+            "aten.convolution.default": OpFusionSpec(
                 recursive=True,
-                consumers=(torch.ops.aten.sigmoid.default,),
+                consumers=("aten.sigmoid.default",),
             )
         }
 
@@ -367,8 +367,8 @@ class TestSubgraphReplacement:
         device = torch.device("cuda:0")
 
         schema: FusionSchema = {
-            torch.ops.aten.convolution.default: OpFusionSpec(
-                recursive=True, consumers=(torch.ops.aten.sigmoid.default,)
+            "aten.convolution.default": OpFusionSpec(
+                recursive=True, consumers=("aten.sigmoid.default",)
             )
         }
 

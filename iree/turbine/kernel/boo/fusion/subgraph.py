@@ -48,7 +48,7 @@ def extract_fusion_subgraph_modules(
         if root.op != "call_function":
             continue
         # Check if this node is a fusion root op
-        node_spec = fusion_schema.get(root.target, None)
+        node_spec = fusion_schema.get(str(root.target), None)
         if node_spec is None:
             continue
 

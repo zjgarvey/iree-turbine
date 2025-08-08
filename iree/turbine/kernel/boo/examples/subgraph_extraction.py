@@ -70,13 +70,13 @@ def main(print_parameters: bool, trace_path: str):
     # If any convolution is followed by a relu, it will be fused into the IREE's convolution kernel.
     # If any linear is preceeded or followed by view ops, those will be fused into the linear op.
     schema: FusionSchema = {
-        torch.ops.aten.convolution.default: OpFusionSpec(
-            recursive=True, producers=(), consumers=(torch.ops.aten.relu.default,)
+        "aten.convolution.default": OpFusionSpec(
+            recursive=True, producers=(), consumers=("aten.relu.default",)
         ),
-        torch.ops.aten.addmm.default: OpFusionSpec(
+        "aten.addmm.default": OpFusionSpec(
             recursive=True,
-            producers=(torch.ops.aten.view.default,),
-            consumers=(torch.ops.aten.view.default,),
+            producers=("aten.view.default",),
+            consumers=("aten.view.default",),
         ),
     }
 

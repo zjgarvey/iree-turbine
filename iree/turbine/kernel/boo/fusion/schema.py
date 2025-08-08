@@ -12,7 +12,7 @@ from typing import Callable, Dict, Sequence
 import torch
 from torch.fx.node import Target, Node
 
-from .replacement import ReplacementSchema, replace_aten_convolution
+from .replacement import ReplacementSchema, replace_aten_convolution, replace_conv_relu
 
 
 @dataclass
@@ -40,7 +40,7 @@ class OpFusionSpec:
         if node.op != "call_function" or not self.check_filters(node):
             return False
         # TODO: add support for capturing all `getitem` ops for multi-output producers.
-        return node.target in self.producers
+        return node.target in self.producers or str(node.target) in self.producers
 
     def is_fusable_consumer(self, node: Node):
         """Checks if `node` is a fusable consumer.
@@ -49,10 +49,25 @@ class OpFusionSpec:
         """
         if node.op != "call_function" or not self.check_filters(node):
             return False
-        return node.target in self.consumers or node.target == getitem
+        return (
+            node.target in self.consumers
+            or str(node.target) in self.consumers
+            or node.target == getitem
+        )
 
 
-FusionSchema = Dict[Target, OpFusionSpec]
+FusionSchema = Dict[str, OpFusionSpec]
+
+
+def _all_unit_spatial_dims_filter(node: Node) -> bool:
+    if str(node.target) not in ["aten.convolution.default", "conv_relu._fwd.default"]:
+        return True
+    x, w, *_ = node.all_input_nodes
+    input_meta = x.meta.get("val", None)
+    weight_meta = w.meta.get("val", None)
+    if input_meta is None or weight_meta is None:
+        return False
+    return all([dim == 1 for dim in input_meta.shape[-2:] + weight_meta.shape[-2:]])
 
 
 def _conv_transpose_filter(node: Node) -> bool:
@@ -64,17 +79,22 @@ def _conv_transpose_filter(node: Node) -> bool:
 
 # TODO: extend this
 DEFAULT_SUPPORTED_BOO_FUSIONS: FusionSchema = {
-    torch.ops.aten.convolution.default: OpFusionSpec(
+    "aten.convolution.default": OpFusionSpec(
         recursive=True,
         make_single_dispatch=True,
         match_filters=(_conv_transpose_filter,),
         consumers=(
-            torch.ops.aten.relu.default,
-            torch.ops.aten.sigmoid.default,
+            "aten.relu.default",
+            "aten.sigmoid.default",
         ),
+    ),
+    "conv_relu._fwd.default": OpFusionSpec(
+        make_single_dispatch=True,
+        match_filters=(),
     ),
 }
 
 DEFAULT_POST_FUSION_REPLACEMENTS: ReplacementSchema = {
-    torch.ops.aten.convolution.default: replace_aten_convolution
+    "aten.convolution.default": replace_aten_convolution,
+    "conv_relu._fwd.default": replace_conv_relu,
 }

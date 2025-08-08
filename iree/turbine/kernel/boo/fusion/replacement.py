@@ -21,7 +21,7 @@ ReplacementSchema = dict[
 def apply_replacements(graph: fx.Graph, replacements: ReplacementSchema):
     for node in graph.nodes:
         if node.op == "call_function":
-            replacer_fn = replacements.get(node.target, lambda *_: None)
+            replacer_fn = replacements.get(str(node.target), lambda *_: None)
             replacement = replacer_fn(node.args, node.meta)
             if replacement is None:
                 continue
@@ -30,6 +30,51 @@ def apply_replacements(graph: fx.Graph, replacements: ReplacementSchema):
                 call_boo = graph.call_function(target, target_args)
             node.replace_all_uses_with(call_boo, propagate_meta=True)
             graph.erase_node(node)
+
+
+def replace_conv_relu(args: tuple[Argument, ...], meta: dict[str, object]):
+    """Replace `torch.ops.conv_relu._fwd` with custom BOO implementation."""
+    (
+        x,
+        weight,
+        bias,
+        padding,
+        stride,
+        dilation,
+        groups,
+    ) = args
+    example_out = meta["val"]
+    assert isinstance(example_out, torch.Tensor)
+    output_is_channels_last = example_out.is_contiguous(
+        memory_format=torch.channels_last
+    )
+    num_spatial_dims = len(example_out.shape) - 2
+
+    def replacement_fn(
+        input, weight, bias, padding, stride, dilation, groups, output_is_channels_last
+    ):
+        y = boo_ops.convolution_replacement(
+            input,
+            weight,
+            bias,
+            stride,
+            padding,
+            dilation,
+            groups,
+            output_is_channels_last,
+        )
+        return torch.ops.aten.relu(y)
+
+    return replacement_fn, (
+        x,
+        weight,
+        bias,
+        boo_ops.make_tuple(padding, num_spatial_dims),
+        boo_ops.make_tuple(stride, num_spatial_dims),
+        boo_ops.make_tuple(dilation, num_spatial_dims),
+        groups,
+        output_is_channels_last,
+    )
 
 
 def replace_aten_convolution(args: tuple[Argument, ...], meta: dict[str, object]):
