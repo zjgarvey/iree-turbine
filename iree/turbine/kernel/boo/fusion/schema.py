@@ -90,7 +90,9 @@ DEFAULT_SUPPORTED_BOO_FUSIONS: FusionSchema = {
     ),
     "conv_relu._fwd.default": OpFusionSpec(
         make_single_dispatch=True,
-        match_filters=(),
+    ),
+    "aten.native_layer_norm.default": OpFusionSpec(
+        make_single_dispatch=True,
     ),
 }
 
