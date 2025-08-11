@@ -82,7 +82,7 @@ DEFAULT_SUPPORTED_BOO_FUSIONS: FusionSchema = {
     "aten.convolution.default": OpFusionSpec(
         recursive=True,
         make_single_dispatch=True,
-        match_filters=(_conv_transpose_filter,),
+        match_filters=(_conv_transpose_filter, _all_unit_spatial_dims_filter),
         consumers=(
             "aten.relu.default",
             "aten.sigmoid.default",
@@ -90,6 +90,7 @@ DEFAULT_SUPPORTED_BOO_FUSIONS: FusionSchema = {
     ),
     "conv_relu._fwd.default": OpFusionSpec(
         make_single_dispatch=True,
+        match_filters=(_all_unit_spatial_dims_filter,),
     ),
     "aten.native_layer_norm.default": OpFusionSpec(
         make_single_dispatch=True,
