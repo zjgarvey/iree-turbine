@@ -1,0 +1,84 @@
+# Copyright 2026 The IREE Authors
+#
+# Licensed under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+
+name: Nightly PyTorch Tests
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Scheduled for 2pm UTC
+    - cron: "0 14 * * *"
+
+jobs:
+  test:
+    name: "PyTorch Nightly"
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: ubuntu-24.04
+            version: "3.12"
+            runs-on: ubuntu-24.04
+            pytorch_requirements: "build_tools/pytorch-cpu-requirements.txt"
+
+    runs-on: ${{matrix.runs-on}}
+    timeout-minutes: 60
+    env:
+      VENV_DIR: ${{ github.workspace }}/.turbine-venv
+    steps:
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+
+      - name: "Setting up Python"
+        id: setup_python
+        uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # v6.1.0
+        with:
+          python-version: ${{matrix.version}}
+
+      - name: Create Python venv
+        run: |
+          python -m venv ${VENV_DIR}
+          source ${VENV_DIR}/bin/activate
+          echo VIRTUAL_ENV=$VIRTUAL_ENV >> "$GITHUB_ENV"
+          echo "$VENV_DIR/bin" >> "$GITHUB_PATH"
+
+      - name: Install pip deps
+        run: |
+          python -m pip install --no-compile --upgrade pip
+          # Note: We install in three steps in order to satisfy requirements
+          # from non default locations first. Additionally, installing
+          # cpu/rocm-specific pytorch wheels first avoids installing
+          # unnecessary libraries included in default pytorch.
+          pip install --no-compile -r ${{ matrix.pytorch_requirements }}
+          pip install --no-cache-dir -r requirements-iree-pinned.txt
+          pip install -e .
+
+      - name: Run unit tests
+        if: ${{ !cancelled() }}
+        run: |
+          echo "Running unit tests for torch nightly."
+          echo $(pip list | grep torch)
+          pytest -n 4 --timeout=300 --capture=tee-sys -vv .
+
+
+  # Depends on all other jobs to provide an aggregate job status.
+  test_pytorch_nightly_summary:
+    if: always()
+    runs-on: ubuntu-24.04
+    needs:
+      - test
+    steps:
+      - name: Getting failed jobs
+        run: |
+          echo '${{ toJson(needs) }}'
+          FAILED_JOBS="$(echo '${{ toJson(needs) }}' \
+            | jq --raw-output \
+            'map_values(select(.result!="success" and .result!="skipped")) | keys | join(",")' \
+          )"
+          echo "failed-jobs=${FAILED_JOBS}" >> $GITHUB_OUTPUT
+          if [[ "${FAILED_JOBS}" != "" ]]; then
+            echo "The following jobs failed: ${FAILED_JOBS}"
+            exit 1
+          fi
